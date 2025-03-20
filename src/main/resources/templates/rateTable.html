@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Insurance Rate Table</title>
+    <style>
+        table, th, td {
+            border: 1px solid black;
+            border-collapse: collapse;
+            padding: 10px;
+        }
+        button {
+            padding: 5px 10px;
+			margin:5px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        .tinted {
+            background-color: #f8d7da;
+        }
+    </style>
+</head>
+<body>
+    <h1>Insurance Rate Tables</h1>
+	
+    <h2>Male Rates</h2>
+    <form th:action="@{/updateMaleRates}" method="post">
+        <table id="maleRateTable">
+            <thead>
+                <tr>
+                    <th>ZIP Code</th>
+                    <th th:each="ageRange : ${ageRanges}" th:text="${ageRange.ageFrom}">Age</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr th:each="zipCode : ${zipCodesMale}" class="rate-row" th:attr="data-zip-code-id=${zipCode.id}">
+                    <td th:text="${zipCode.zipFrom}">ZIP Code</td>
+                    <td th:each="ageRange : ${ageRanges}">
+                        <input type="number" th:name="'maleRates.zipCode.' + ${zipCode.id} + '.ageRange.' + ${ageRange.id}" th:value="${maleRates[zipCode.id][ageRange.id]}" />
+                    </td>
+                    <td>
+                        <button type="button" class="remove-row">Remove</button>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+        <input type="hidden" id="maleRemovedRows" name="maleRemovedRows">
+        <button type="button" class="addRowButton">Add Row</button>
+        <button type="submit">Save Male Rates</button>
+    </form>
+
+    <h2>Female Rates</h2>
+    <form th:action="@{/updateFemaleRates}" method="post">
+        <table id="femaleRateTable">
+            <thead>
+                <tr>
+                    <th>ZIP Code</th>
+                    <th th:each="ageRange : ${ageRanges}" th:text="${ageRange.ageFrom}">Age</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr th:each="zipCode : ${zipCodesFemale}" class="rate-row" th:attr="data-zip-code-id=${zipCode.id}">
+                    <td th:text="${zipCode.zipFrom}">ZIP Code</td>
+                    <td th:each="ageRange : ${ageRanges}">
+                        <input type="number" th:name="'femaleRates.zipCode.' + ${zipCode.id} + '.ageRange.' + ${ageRange.id}" th:value="${femaleRates[zipCode.id][ageRange.id]}" />
+                    </td>
+                    <td>
+                        <button type="button" class="remove-row">Remove</button>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+		<input type="hidden" id="femaleRemovedRows" name="femaleRemovedRows">
+        <button type="button" class="addRowButton">Add Row</button>
+        <button type="submit">Save Female Rates</button>
+    </form>
+	<button type="button"  onclick="openRateCalculator()">Open Rate Calculator</button>
+
+    <script th:inline="javascript">
+        const ageRanges = [[${ageRanges}]];
+        let removedRowsMale = [];
+		let removedRowsFemale = [];
+		let newRowCount=0;
+
+        // Helper function to handle Add Row functionality
+        function addRowHandler(tableId) {
+            const table = document.getElementById(tableId).querySelector("tbody");
+            const row = document.createElement("tr");
+            row.classList.add("rate-row");
+
+            // Create the ZIP Code cell
+            const zipCell = document.createElement("td");
+            const zipInput = document.createElement("input");
+            zipInput.type = "number";
+            zipInput.name = `newRow.zipCode`+ ++newRowCount;
+            zipInput.placeholder = "New ZIP Code";
+            zipCell.appendChild(zipInput);
+            row.appendChild(zipCell);
+
+            // Create the Age Range cells
+            ageRanges.forEach(age => {
+                const ageCell = document.createElement("td");
+                const ageInput = document.createElement("input");
+                ageInput.type = "number";
+                ageInput.name = `newRow.ageRange.${age.id}.${newRowCount}`;
+                ageInput.placeholder = `Rate`;
+                ageCell.appendChild(ageInput);
+                row.appendChild(ageCell);
+            });
+
+            // Create the Actions cell
+            const actionCell = document.createElement("td");
+            const removeButton = document.createElement("button");
+            removeButton.type = "button";
+            removeButton.textContent = "Remove";
+            removeButton.classList.add("remove-row");
+            removeButton.addEventListener("click", () => handleRemoveClickForNew(row));
+            actionCell.appendChild(removeButton);
+            row.appendChild(actionCell);
+
+            table.appendChild(row);
+        }
+		
+		function handleRemoveClickForNew(row){
+			row.remove();
+			newRowCount--;
+		}
+
+        // Handle Remove/Cancel Click for both Male and Female rates
+        function handleRemoveClick(row, gender) {
+            const isRemoving = row.classList.contains("tinted");
+			const removeButton = row.querySelector(".remove-row");
+			
+			if(gender == 'male'){
+	            if (isRemoving) {
+	                // Unmark the row for removal
+	                row.classList.remove("tinted");
+	                removedRowsMale = removedRowsMale.filter(r => r !== row.dataset.zipCodeId);
+					removeButton.textContent = "Remove";
+	            } else {
+	                // Mark the row for removal
+	                row.classList.add("tinted");
+	                removedRowsMale.push(row.dataset.zipCodeId);
+					removeButton.textContent = "Cancel";
+	            }
+	        	document.getElementById(gender +"RemovedRows").value = removedRowsMale.join(',');
+			}
+			else{
+				if (isRemoving) {
+				    // Unmark the row for removal
+				    row.classList.remove("tinted");
+				    removedRowsFemale = removedRowsFemale.filter(r => r !== row.dataset.zipCodeId);
+					removeButton.textContent = "Remove";
+				} else {
+				    // Mark the row for removal
+				    row.classList.add("tinted");
+				    removedRowsFemale.push(row.dataset.zipCodeId);
+					removeButton.textContent = "Cancel";
+				}
+				document.getElementById(gender +"RemovedRows").value = removedRowsFemale.join(',');
+			}
+        }
+
+        // Attach Add Row functionality to both male and female tables
+        document.querySelectorAll(".addRowButton").forEach(button => {
+            button.addEventListener("click", function () {
+                const tableId = button.closest("form").querySelector("table").id;
+                addRowHandler(tableId);
+            });
+        });
+
+        // Attach Remove/Cancel functionality to all existing rows
+        document.querySelectorAll(".remove-row").forEach(button => {
+            const row = button.closest("tr");
+            const gender = row.closest("form").querySelector("table").id.includes("female") ? "female" : "male";
+            button.addEventListener("click", () => handleRemoveClick(row, gender));
+        });
+		document.querySelectorAll("form").forEach(form => {
+		    form.addEventListener("submit", function (event) {
+		        // Find all rows marked for removal (with 'tinted' class) within the current form's table
+		        const table = form.querySelector("table");
+		        table.querySelectorAll(".rate-row.tinted").forEach(row => {
+		            row.remove(); // Physically remove the row from the DOM
+		        });
+		    });
+		});
+		function openRateCalculator() {
+		    // Replace '/rate-calculator' with the actual URL or endpoint of your rate calculator
+		    window.open('/rateCalculator', '_blank');
+		}
+    </script>
+
+</body>
+</html>
